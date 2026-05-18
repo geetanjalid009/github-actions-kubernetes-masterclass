@@ -1,9 +1,11 @@
 CLUSTER  ?= skillpulse
 NAMESPACE ?= skillpulse
-BACKEND_IMAGE  ?= trainwithshubham/skillpulse-backend:latest
-FRONTEND_IMAGE ?= trainwithshubham/skillpulse-frontend:latest
+DOCKER_USER ?= geetanjalid009
 
-.PHONY: up down build load apply status logs mysql restart
+BACKEND_IMAGE  ?= $(DOCKER_USER)/skillpulse-backend:latest
+FRONTEND_IMAGE ?= $(DOCKER_USER)/skillpulse-frontend:latest
+
+.PHONY: up down build load apply status logs mysql restart health argocd-install argocd-app argocd-password
 
 up: ## One-shot: build images, create cluster, load images, apply manifests
 	$(MAKE) build
@@ -31,6 +33,10 @@ apply: ## Apply manifests and wait for rollouts
 	kubectl rollout status deployment/backend   -n $(NAMESPACE) --timeout=120s
 	kubectl rollout status deployment/frontend  -n $(NAMESPACE) --timeout=60s
 
+health: ## Smoke test the application through frontend reverse proxy
+	curl -f http://localhost:8888/health
+	curl -f http://localhost:8888/api/dashboard
+
 down: ## Delete the cluster
 	kind delete cluster --name $(CLUSTER)
 
@@ -49,3 +55,15 @@ restart: ## Rebuild + reload images, roll backend + frontend
 	kubectl rollout restart deployment/backend deployment/frontend -n $(NAMESPACE)
 	kubectl rollout status  deployment/backend  -n $(NAMESPACE) --timeout=120s
 	kubectl rollout status  deployment/frontend -n $(NAMESPACE) --timeout=60s
+
+argocd-install: ## Install ArgoCD inside the current Kubernetes cluster
+	kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+	kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+	kubectl rollout status deployment/argocd-server -n argocd --timeout=300s
+
+argocd-app: ## Register SkillPulse app in ArgoCD
+	kubectl apply -f argocd/skillpulse-application.yaml
+
+argocd-password: ## Print initial ArgoCD admin password
+	kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+	@echo
