@@ -8,10 +8,10 @@ FRONTEND_IMAGE ?= $(DOCKER_USER)/skillpulse-frontend:latest
 .PHONY: up down build load apply status logs mysql restart health argocd-install argocd-app argocd-password
 
 up: ## One-shot: build images, create cluster, load images, apply manifests
-	$(MAKE) build
+	make build
 	kind create cluster --config k8s/kind-config.yaml --name $(CLUSTER)
-	$(MAKE) load
-	$(MAKE) apply
+	make load
+	make apply
 	@echo
 	@echo "  SkillPulse is live at http://localhost:8888"
 	@echo
@@ -50,8 +50,8 @@ mysql: ## Open a mysql shell into the StatefulSet pod
 	kubectl exec -it -n $(NAMESPACE) mysql-0 -- mysql -uskillpulse -pskillpulse123 skillpulse
 
 restart: ## Rebuild + reload images, roll backend + frontend
-	$(MAKE) build
-	$(MAKE) load
+	make build
+	make load
 	kubectl rollout restart deployment/backend deployment/frontend -n $(NAMESPACE)
 	kubectl rollout status  deployment/backend  -n $(NAMESPACE) --timeout=120s
 	kubectl rollout status  deployment/frontend -n $(NAMESPACE) --timeout=60s
