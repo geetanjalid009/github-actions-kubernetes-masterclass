@@ -7,24 +7,30 @@ FRONTEND_IMAGE ?= $(DOCKER_USER)/skillpulse-frontend:latest
 
 .PHONY: up down build load apply status logs mysql restart health argocd-install argocd-app argocd-password
 
-up: ## One-shot: build images, create cluster, load images, apply manifests
-	make build
+up: build ## One-shot: build images, create cluster, load images, apply manifests
 	kind create cluster --config k8s/kind-config.yaml --name $(CLUSTER)
-	make load
-	make apply
+	kind load docker-image $(BACKEND_IMAGE)  --name $(CLUSTER)
+	kind load docker-image $(FRONTEND_IMAGE) --name $(CLUSTER)
+	kubectl apply -f k8s/00-namespace.yaml \
+	              -f k8s/10-mysql.yaml \
+	              -f k8s/20-backend.yaml \
+	              -f k8s/30-frontend.yaml
+	kubectl rollout status statefulset/mysql    -n $(NAMESPACE) --timeout=180s
+	kubectl rollout status deployment/backend   -n $(NAMESPACE) --timeout=120s
+	kubectl rollout status deployment/frontend  -n $(NAMESPACE) --timeout=60s
 	@echo
 	@echo "  SkillPulse is live at http://localhost:8888"
 	@echo
 
-build: ## Build backend + frontend images for the host's architecture
+build:
 	docker build -t $(BACKEND_IMAGE)  ./backend
 	docker build -t $(FRONTEND_IMAGE) ./frontend
 
-load: ## Push built images into the kind node
+load:
 	kind load docker-image $(BACKEND_IMAGE)  --name $(CLUSTER)
 	kind load docker-image $(FRONTEND_IMAGE) --name $(CLUSTER)
 
-apply: ## Apply manifests and wait for rollouts
+apply:
 	kubectl apply -f k8s/00-namespace.yaml \
 	              -f k8s/10-mysql.yaml \
 	              -f k8s/20-backend.yaml \
@@ -33,37 +39,37 @@ apply: ## Apply manifests and wait for rollouts
 	kubectl rollout status deployment/backend   -n $(NAMESPACE) --timeout=120s
 	kubectl rollout status deployment/frontend  -n $(NAMESPACE) --timeout=60s
 
-health: ## Smoke test the application through frontend reverse proxy
+health:
 	curl -f http://localhost:8888/health
 	curl -f http://localhost:8888/api/dashboard
 
-down: ## Delete the cluster
+down:
 	kind delete cluster --name $(CLUSTER)
 
-status: ## Quick health snapshot
-	@kubectl get pods,svc,endpoints -n $(NAMESPACE)
+status:
+	kubectl get pods,svc,endpoints -n $(NAMESPACE)
 
-logs: ## Tail all three workloads at once
-	@kubectl logs -n $(NAMESPACE) -l 'app in (mysql,backend,frontend)' --all-containers --tail=50 -f --max-log-requests=10
+logs:
+	kubectl logs -n $(NAMESPACE) -l 'app in (mysql,backend,frontend)' --all-containers --tail=50 -f --max-log-requests=10
 
-mysql: ## Open a mysql shell into the StatefulSet pod
+mysql:
 	kubectl exec -it -n $(NAMESPACE) mysql-0 -- mysql -uskillpulse -pskillpulse123 skillpulse
 
-restart: ## Rebuild + reload images, roll backend + frontend
-	make build
-	make load
+restart: build
+	kind load docker-image $(BACKEND_IMAGE)  --name $(CLUSTER)
+	kind load docker-image $(FRONTEND_IMAGE) --name $(CLUSTER)
 	kubectl rollout restart deployment/backend deployment/frontend -n $(NAMESPACE)
-	kubectl rollout status  deployment/backend  -n $(NAMESPACE) --timeout=120s
-	kubectl rollout status  deployment/frontend -n $(NAMESPACE) --timeout=60s
+	kubectl rollout status deployment/backend  -n $(NAMESPACE) --timeout=120s
+	kubectl rollout status deployment/frontend -n $(NAMESPACE) --timeout=60s
 
-argocd-install: ## Install ArgoCD inside the current Kubernetes cluster
+argocd-install:
 	kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 	kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 	kubectl rollout status deployment/argocd-server -n argocd --timeout=300s
 
-argocd-app: ## Register SkillPulse app in ArgoCD
+argocd-app:
 	kubectl apply -f argocd/skillpulse-application.yaml
 
-argocd-password: ## Print initial ArgoCD admin password
+argocd-password:
 	kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
 	@echo
