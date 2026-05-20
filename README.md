@@ -232,9 +232,9 @@ Troubleshooting Production Issues
 
 ---
 
-### Horizontal Pod Autoscaler (HPA)
+### Horizontal Pod Autoscaler 
 
-![HPA](screenshots/HPA.png)
+![HPA](screenshots/hpa.png)
 
 ---
 
