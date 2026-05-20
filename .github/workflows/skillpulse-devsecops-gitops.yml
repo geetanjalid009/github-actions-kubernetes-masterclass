@@ -111,7 +111,11 @@ jobs:
 
       - name: Validate Kubernetes YAML
         run: |
-          kubeconform k8s/*.yaml
+           kubeconform \
+             k8s/00-namespace.yaml \
+             k8s/10-mysql.yaml \
+             k8s/20-backend.yaml \
+             k8s/30-frontend.yaml
 
 # =========================================================
 # SECURITY SUMMARY
