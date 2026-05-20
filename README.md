@@ -22,7 +22,6 @@ The goal of this project is to practice and implement:
 
 ---
 
-```md
 # Project Architecture
 ![Architecture](screenshots/architecture.png)
 
@@ -40,7 +39,9 @@ Backend Pod (API Layer)
 MySQL Service
        ↓
 MySQL StatefulSet + Persistent Storage
+```
 
+---
 
 Tech Stack Used
 Category	Tools / Technologies
