@@ -22,8 +22,10 @@ The goal of this project is to practice and implement:
 
 ---
 
+```md
 # Project Architecture
 ![Architecture](screenshots/architecture.png)
+
 ```text
 User / Browser
        ↓
@@ -206,21 +208,31 @@ Troubleshooting Production Issues
 ## Screenshots
 
 ### GitHub Actions — CI Pipeline
-<!-- Add screenshot -->
+
 ![GitHub Actions](screenshots/github-actions.png)
 
+---
+
 ### ArgoCD — Application Health
-<!-- Add screenshot -->
+
 ![ArgoCD](screenshots/argocd-dashboard.png)
 
-### Grafana — Node Exporter
-<!-- Add screenshot -->
+---
+
+### Grafana — Monitoring Dashboard
+
 ![Grafana](screenshots/grafana-dashboard.png)
 
-### SkillPulse App
+---
+
+### SkillPulse Application
+
 ![SkillPulse](screenshots/skillpulse-app.png)
 
-### Horizontal Pod Cluster
+---
+
+### Horizontal Pod Autoscaler (HPA)
+
 ![HPA](screenshots/HPA.png)
 
 ---
