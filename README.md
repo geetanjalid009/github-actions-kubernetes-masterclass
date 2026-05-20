@@ -1,145 +1,218 @@
-1. Project Title
-# SkillPulse End-to-End DevSecOps GitOps Platform
-2. Short Description
+SkillPulse — Production Grade DevOps Project on Kubernetes
+# 🚀 SkillPulse — End-to-End Production Grade DevOps Project on Kubernetes
 
-Explain:
+SkillPulse is a production-style end-to-end DevOps project designed to simulate a real-world cloud-native application deployment workflow using Docker, Kubernetes, GitHub Actions, ArgoCD, and monitoring tools.
 
-3-tier application
-DevSecOps
-GitOps
-Observability
-Auto-scaling
-Kubernetes
-
-Example:
-
-SkillPulse is a production-grade 3-tier Kubernetes DevSecOps platform implementing CI/CD, GitOps, Observability, Auto Scaling, and Security Scanning using GitHub Actions, ArgoCD, Prometheus, Grafana, and Kubernetes.
-3. Architecture Diagram
-
-Add architecture image.
-
-Recommended flow:
-
-Developer
-   ↓
-GitHub
-   ↓
-GitHub Actions
-   ↓
-Docker Build + Trivy + Scans
-   ↓
-Docker Hub
-   ↓
-Manifest Update
-   ↓
-ArgoCD GitOps
-   ↓
-Kubernetes Cluster
-   ↓
-Frontend / Backend / MySQL
-   ↓
-Prometheus + Grafana Monitoring
-   ↓
-HPA Auto Scaling
-4. Tech Stack Section
-
-Example:
-
-## Tech Stack
-
-- Docker
-- Kubernetes
-- GitHub Actions
-- ArgoCD
-- Prometheus
-- Grafana
-- Helm
-- Metrics Server
-- HPA
-- Trivy
-- Kind
-- MySQL
-- Golang Backend
-- Frontend UI
-5. Features Section
-
-Example:
-
-## Features
-
-✅ Matrix-based GitHub Actions CI/CD  
-✅ Parallel Backend & Frontend Build Jobs  
-✅ DevSecOps Security Scanning  
-✅ Trivy Vulnerability Scanning  
-✅ Docker Multi-stage Distroless Builds  
-✅ GitOps Deployment using ArgoCD  
-✅ Kubernetes Auto-Healing  
-✅ Horizontal Pod Autoscaling (HPA)  
-✅ Prometheus + Grafana Monitoring  
-✅ Namespace-based Resource Isolation  
-✅ Stateful MySQL Deployment  
-✅ Metrics Server Integration  
-6. CI/CD Flow
-
-Explain:
-
-git push
-↓
-GitHub Actions
-↓
-Security Scans
-↓
-Docker Build & Push
-↓
-Manifest Update
-↓
-ArgoCD Auto Sync
-↓
-Kubernetes Deployment
-7. Monitoring Section
-
-Add screenshots of:
-
-Grafana Dashboard
-ArgoCD Dashboard
-GitHub Actions Pipeline
-kubectl get hpa
-8. Auto Scaling Section
-
-Example:
-
-## Auto Scaling
-
-HPA automatically scales frontend and backend pods based on CPU utilization.
-
-- Min Replicas: 1
-- Max Replicas: 5
-- Target CPU: 50%
-9. Commands Section
-
-Example:
-
-## Useful Commands
-
-```bash
-make up
-make health
-kubectl get pods -n skillpulse
-kubectl get hpa -n skillpulse
-kubectl top pods -n skillpulse
+This project demonstrates containerization, Kubernetes orchestration, CI/CD automation, GitOps deployment, monitoring, troubleshooting, and infrastructure practices followed in modern DevOps environments.
 
 ---
 
-# 10. Future Improvements
+# 📌 Project Objective
 
-Example:
+The goal of this project is to practice and implement:
 
-```md
-## Future Improvements
+- Docker containerization
+- Kubernetes deployment
+- StatefulSet for MySQL
+- CI/CD with GitHub Actions
+- GitOps with ArgoCD
+- Monitoring and observability
+- Kubernetes troubleshooting
+- Production-grade deployment practices
 
-- NGINX Ingress Controller
-- SSL/TLS HTTPS
-- Loki Log Aggregation
-- Slack Alerts
-- Helm Packaging
-- AWS EKS Deployment
+---
+
+# 🏗️ Project Architecture
+
+```text
+User / Browser
+       ↓
+Frontend Service (Kubernetes Service)
+       ↓
+Frontend Pod (Nginx / UI)
+       ↓
+Backend Service
+       ↓
+Backend Pod (API Layer)
+       ↓
+MySQL Service
+       ↓
+MySQL StatefulSet + Persistent Storage
+⚙️ Tech Stack Used
+Category	Tools / Technologies
+Containerization	Docker
+Container Registry	Docker Hub
+Orchestration	Kubernetes (kind)
+CI/CD	GitHub Actions
+GitOps	ArgoCD
+Monitoring	Prometheus & Grafana (planned)
+Cloud	AWS (upcoming deployment)
+Scripting	Shell
+Version Control	Git & GitHub
+OS	Linux / Git Bash / Windows
+📂 Kubernetes Components Used
+Namespace
+Deployment
+Service
+StatefulSet
+ConfigMap
+Secret
+Persistent Volume
+Persistent Volume Claim
+Rollout Strategy
+Health Checks
+Service Discovery
+📦 Docker Images
+geetanjalid009/skillpulse-backend:latest
+geetanjalid009/skillpulse-frontend:latest
+🚀 Project Deployment Steps
+1️⃣ Clone Repository
+git clone <your-repo-url>
+cd github-actions-kubernetes-masterclass
+2️⃣ Build Docker Images
+docker build -t geetanjalid009/skillpulse-backend:latest ./backend
+docker build -t geetanjalid009/skillpulse-frontend:latest ./frontend
+3️⃣ Create Kubernetes Cluster
+kind create cluster --config k8s/kind-config.yaml --name skillpulse
+4️⃣ Load Images into kind Cluster
+kind load docker-image geetanjalid009/skillpulse-backend:latest --name skillpulse
+
+kind load docker-image geetanjalid009/skillpulse-frontend:latest --name skillpulse
+5️⃣ Deploy Kubernetes Manifests
+kubectl apply -f k8s/00-namespace.yaml \
+               -f k8s/10-mysql.yaml \
+               -f k8s/20-backend.yaml \
+               -f k8s/30-frontend.yaml
+🔍 Verify Deployment
+Check Pods
+kubectl get pods -n skillpulse
+Check Services
+kubectl get svc -n skillpulse
+Check Complete Resources
+kubectl get all -n skillpulse
+🩺 Health Check APIs
+Application Health
+curl http://localhost:8888/health
+
+Output:
+
+{"status":"healthy"}
+Dashboard API
+curl http://localhost:8888/api/dashboard
+
+Output:
+
+{
+  "total_skills":5,
+  "total_hours":16,
+  "total_logs":9,
+  "top_skill":"Docker"
+}
+🔄 GitHub Actions CI/CD Workflow
+
+This project uses GitHub Actions to automate:
+
+Docker image build
+Docker Hub authentication
+Docker image push
+CI/CD pipeline execution
+🔐 GitHub Secrets Used
+Secret Name	Purpose
+DOCKERHUB_USERNAME	Docker Hub Username
+DOCKERHUB_TOKEN	Docker Hub Personal Access Token
+🛠️ Challenges Faced & Troubleshooting
+1️⃣ make Command Failure in Git Bash
+Problem
+/usr/bin/sh: syntax error near unexpected token '('
+Root Cause
+
+GnuWin32 make was installed inside:
+
+C:\Program Files (x86)\
+
+Git Bash was unable to handle (x86) path correctly.
+
+Solution
+Removed recursive make build calls
+Executed commands directly
+Used PowerShell/CMD for make operations
+Modified Makefile structure
+2️⃣ Chocolatey Installation Failure
+Problem
+Unable to obtain lock file access
+Cause
+
+Chocolatey lock corruption issue.
+
+Solution
+Switched from Chocolatey to Winget
+Installed Make using:
+winget install GnuWin32.Make
+3️⃣ kind Command Not Found
+Problem
+The system cannot find the file specified
+Solution
+
+Installed kind:
+
+winget install Kubernetes.kind
+4️⃣ Kubernetes YAML Errors
+Problems Faced
+Wrong indentation
+Invalid fields
+Service configuration mistakes
+Namespace mismatch issues
+Solution
+Corrected YAML formatting
+Validated manifests carefully
+Applied resources sequentially
+5️⃣ Docker Build & Image Issues
+Problems
+Wrong image tags
+Build context issues
+Docker daemon connection issues
+Solution
+Verified Docker Desktop
+Corrected image naming
+Used proper build paths
+📊 Kubernetes Commands Practiced
+Logs
+kubectl logs -f deployment/frontend -n skillpulse
+Describe Pod
+kubectl describe pod <pod-name> -n skillpulse
+Rollout Status
+kubectl rollout status deployment/frontend -n skillpulse
+Restart Deployment
+kubectl rollout restart deployment/frontend -n skillpulse
+🔥 Key DevOps Concepts Practiced
+CI/CD Pipeline
+GitOps Workflow
+Infrastructure Automation
+Kubernetes Networking
+Stateful Applications
+Service Discovery
+Pod Communication
+Container Lifecycle
+Monitoring & Observability
+Troubleshooting Production Issues
+🚀 Upcoming Enhancements
+AWS EC2 Deployment
+Terraform Infrastructure
+Prometheus Monitoring
+Grafana Dashboards
+ArgoCD Auto Sync
+Ingress Controller
+HTTPS & Domain Setup
+Horizontal Pod Autoscaler (HPA)
+📈 Resume / Interview Highlights
+
+This project demonstrates hands-on experience with:
+
+Docker
+Kubernetes
+GitHub Actions
+ArgoCD
+CI/CD
+GitOps
+Troubleshooting
+Production-grade deployments
