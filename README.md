@@ -74,6 +74,7 @@ geetanjalid009/skillpulse-backend:latest
 geetanjalid009/skillpulse-frontend:latest
 
 Project Deployment Steps
+
 1️⃣ Clone Repository
 git clone <your-repo-url>
 cd github-actions-kubernetes-masterclass
