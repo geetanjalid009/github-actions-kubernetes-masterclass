@@ -134,6 +134,7 @@ DOCKERHUB_USERNAME	Docker Hub Username
 DOCKERHUB_TOKEN	Docker Hub Personal Access Token
 
 Challenges Faced & Troubleshooting
+
 1️⃣ make Command Failure in Git Bash
 Problem
 /usr/bin/sh: syntax error near unexpected token '('
@@ -155,6 +156,7 @@ Modified Makefile structure
 Problem Unable to obtain lock file access Cause Chocolatey lock corruption issue. Solution Switched from Chocolatey to Winget
 Installed Make using:
 winget install GnuWin32.Make
+
 3️⃣ kind Command Not Found
 Problem
 The system cannot find the file specified
@@ -169,6 +171,7 @@ Wrong indentation
 Invalid fields
 Service configuration mistakes
 Namespace mismatch issues
+
 Solution
 Corrected YAML formatting
 Validated manifests carefully
@@ -179,6 +182,7 @@ Problems
 Wrong image tags
 Build context issues
 Docker daemon connection issues
+
 Solution
 Verified Docker Desktop
 Corrected image naming
