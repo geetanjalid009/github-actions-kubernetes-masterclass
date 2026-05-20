@@ -9,7 +9,7 @@ FRONTEND_IMAGE ?= $(DOCKER_USER)/skillpulse-frontend:latest
 
 up: ## One-shot: build images, create cluster, load images, apply manifests
 	$(MAKE) build
-	kind create cluster --config k8s/kind-config.yaml --name $(CLUSTER)
+	kind create cluster --config kind/kind-config.yaml --name $(CLUSTER)
 	$(MAKE) load
 	$(MAKE) apply
 	@echo
