@@ -5,6 +5,12 @@ on:
     branches:
       - main
       - skillpulse-end-to-end-devops
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+
+permissions:
+  contents: write
 
 env:
   DOCKER_USER: geetanjalid009
@@ -12,163 +18,204 @@ env:
 
 jobs:
 
-# =========================================================
-# BACKEND CI
-# =========================================================
-
-  backend-ci:
-    name: Backend CI
+  code-quality:
+    name: code-quality / validate-${{ matrix.service }}
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [backend, frontend]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v5
 
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: DockerHub Login
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build Backend Distroless Image
+      - name: Validate backend Go module
+        if: matrix.service == 'backend'
+        working-directory: backend
         run: |
-          docker build \
-          -t $DOCKER_USER/skillpulse-backend:${{ github.sha }} \
-          -t $DOCKER_USER/skillpulse-backend:latest \
-          ./backend
+          go mod tidy
+          go test ./...
 
-      - name: Trivy Backend Scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: '${{ env.DOCKER_USER }}/skillpulse-backend:${{ github.sha }}'
-          format: 'table'
-          exit-code: '0'
-
-      - name: Push Backend Image
+      - name: Validate frontend static files
+        if: matrix.service == 'frontend'
         run: |
-          docker push $DOCKER_USER/skillpulse-backend:${{ github.sha }}
-          docker push $DOCKER_USER/skillpulse-backend:latest
+          test -f frontend/index.html
+          test -f frontend/nginx.conf
+          test -d frontend/css
+          test -d frontend/js
+          echo "Frontend static files validated"
 
-# =========================================================
-# FRONTEND CI
-# =========================================================
-
-  frontend-ci:
-    name: Frontend CI
+  secret-scan:
+    name: secret-scan / secrets-scan-${{ matrix.service }}
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [backend, frontend]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v5
 
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: DockerHub Login
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build Frontend Image
+      - name: Run secret pattern scan
         run: |
-          docker build \
-          -t $DOCKER_USER/skillpulse-frontend:${{ github.sha }} \
-          -t $DOCKER_USER/skillpulse-frontend:latest \
-          ./frontend
+          echo "Scanning ${{ matrix.service }} for common secret patterns"
+          if grep -RInE "(AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID|PRIVATE KEY|password=|token=|api_key=)" ${{ matrix.service }}; then
+            echo "Potential secret found in ${{ matrix.service }}"
+            exit 1
+          else
+            echo "No common secret patterns found in ${{ matrix.service }}"
+          fi
 
-      - name: Trivy Frontend Scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: '${{ env.DOCKER_USER }}/skillpulse-frontend:${{ github.sha }}'
-          format: 'table'
-          exit-code: '0'
-
-      - name: Push Frontend Image
-        run: |
-          docker push $DOCKER_USER/skillpulse-frontend:${{ github.sha }}
-          docker push $DOCKER_USER/skillpulse-frontend:latest
-
-# =========================================================
-# DATABASE VALIDATION
-# =========================================================
-
-  db-validation:
-    name: Kubernetes & DB Validation
+  dependency-scan:
+    name: dependency-scan / dependencies-check-${{ matrix.service }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [backend, frontend]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
 
+      - name: Backend dependency check
+        if: matrix.service == 'backend'
+        working-directory: backend
+        run: |
+          go list -m all
+          go mod verify
+
+      - name: Frontend dependency check
+        if: matrix.service == 'frontend'
+        run: |
+          echo "Frontend is static HTML/CSS/JS, no package manager dependency found"
+
+  dockerfile-scan:
+    name: dockerfile-scan / validate-${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [backend, frontend]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
+
+      - name: Validate Dockerfile exists
+        run: |
+          test -f ${{ matrix.service }}/Dockerfile
+          echo "Dockerfile found for ${{ matrix.service }}"
+
+      - name: Dockerfile security check
+        run: |
+          echo "Checking Dockerfile for ${{ matrix.service }}"
+          if grep -n "latest" ${{ matrix.service }}/Dockerfile; then
+            echo "Warning: latest tag found. Prefer fixed versions in production."
+          fi
+          if grep -n "USER root" ${{ matrix.service }}/Dockerfile; then
+            echo "Root user found. Please use non-root user."
+            exit 1
+          fi
+
+  k8s-db-validation:
+    name: k8s-db-validation
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v5
 
       - name: Install kubeconform
         run: |
-          curl -L https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz \
-          | tar xz
+          curl -L https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
           sudo mv kubeconform /usr/local/bin/
 
-      - name: Validate Kubernetes YAML
+      - name: Validate Kubernetes manifests only
         run: |
-           kubeconform \
-             k8s/00-namespace.yaml \
-             k8s/10-mysql.yaml \
-             k8s/20-backend.yaml \
-             k8s/30-frontend.yaml
+          kubeconform \
+            k8s/00-namespace.yaml \
+            k8s/10-mysql.yaml \
+            k8s/20-backend.yaml \
+            k8s/30-frontend.yaml
 
-# =========================================================
-# SECURITY SUMMARY
-# =========================================================
-
-  security-summary:
-    name: Security Summary
+  build:
+    name: build / build-push-${{ matrix.service }}
     runs-on: ubuntu-latest
-
     needs:
-      - backend-ci
-      - frontend-ci
-      - db-validation
-
+      - code-quality
+      - secret-scan
+      - dependency-scan
+      - dockerfile-scan
+      - k8s-db-validation
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [backend, frontend]
     steps:
-      - name: Security Validation Complete
+      - name: Checkout Code
+        uses: actions/checkout@v5
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: DockerHub Login
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build image
         run: |
-          echo "All scans and validations passed."
+          docker build \
+            -t $DOCKER_USER/skillpulse-${{ matrix.service }}:${{ github.sha }} \
+            -t $DOCKER_USER/skillpulse-${{ matrix.service }}:latest \
+            ./${{ matrix.service }}
 
-# =========================================================
-# GITOPS MANIFEST UPDATE
-# =========================================================
+      - name: Push image
+        run: |
+          docker push $DOCKER_USER/skillpulse-${{ matrix.service }}:${{ github.sha }}
+          docker push $DOCKER_USER/skillpulse-${{ matrix.service }}:latest
 
-  update-k8s-manifests:
-    name: Update Kubernetes Manifests
+  update-deployment:
+    name: build / update-deployment
     runs-on: ubuntu-latest
-
     needs:
-      - security-summary
-
-    permissions:
-      contents: write
-
+      - build
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref_name }}
 
-      - name: Update Backend Image
+      - name: Update backend and frontend image tags
         run: |
-          sed -i "s|image: .*skillpulse-backend:.*|image: geetanjalid009/skillpulse-backend:${{ github.sha }}|" k8s/20-backend.yaml
+          sed -i "s|image: .*skillpulse-backend:.*|image: $DOCKER_USER/skillpulse-backend:${{ github.sha }}|" k8s/20-backend.yaml
+          sed -i "s|image: .*skillpulse-frontend:.*|image: $DOCKER_USER/skillpulse-frontend:${{ github.sha }}|" k8s/30-frontend.yaml
 
-      - name: Update Frontend Image
+      - name: Commit GitOps manifest changes
         run: |
-          sed -i "s|image: .*skillpulse-frontend:.*|image: geetanjalid009/skillpulse-frontend:${{ github.sha }}|" k8s/30-frontend.yaml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "No manifest changes to commit"
+            exit 0
+          fi
+          git add k8s/20-backend.yaml k8s/30-frontend.yaml
+          git commit -m "deploy: update SkillPulse images to ${GITHUB_SHA:0:7}"
+          git push origin HEAD:${{ github.ref_name }}
 
-      - name: Commit Manifest Changes
-        run: |
-          git config --global user.email "github-actions@github.com"
-          git config --global user.name "github-actions"
-
-          git add .
-
-          git commit -m "Updated images to ${{ github.sha }}" || echo "No changes"
-
-          git push
+  trivy:
+    name: trivy / scan-${{ matrix.service }}
+    runs-on: ubuntu-latest
+    needs:
+      - update-deployment
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [backend, frontend]
+    steps:
+      - name: Run Trivy image scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.DOCKER_USER }}/skillpulse-${{ matrix.service }}:${{ github.sha }}'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
